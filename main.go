@@ -1,12 +1,24 @@
 package main
 
 import (
+	"flag"
+	"github.com/go-kit/kit/log"
 	httptransport "github.com/go-kit/kit/transport/http"
 	"net/http"
+	"os"
 )
 
 func main() {
-	svc := NewInmemService()
+	listen := flag.String("listen", ":8080", "HTTP listen address")
+	flag.Parse()
+
+	var logger log.Logger
+	logger = log.NewLogfmtLogger(os.Stderr)
+	logger = log.With(logger, "listen", *listen, "caller", log.DefaultCaller)
+
+	svc := NewInMemoryService()
+	svc = threadServiceloggingMiddleware(logger)(svc)
+
 	endpoints := makeThreadServiceEndpoints(svc)
 
 	postCommentHandler := httptransport.NewServer(
@@ -23,5 +35,6 @@ func main() {
 	http.Handle("/postComment", postCommentHandler)
 	http.Handle("/getComment", getCommentHandler)
 
-	http.ListenAndServe(":8080", nil)
+	logger.Log("msg", "HTTP", "addr", *listen)
+	logger.Log("err", http.ListenAndServe(*listen, nil))
 }
