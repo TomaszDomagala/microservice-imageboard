@@ -19,19 +19,19 @@ func main() {
 	logger = log.With(logger, "listen", *listen, "caller", log.DefaultCaller)
 
 	svc := thread.NewInMemoryService()
-	svc = thread.threadServiceloggingMiddleware(logger)(svc)
+	svc = thread.ServiceLoggingMiddleware(logger)(svc)
 
-	endpoints := thread.makeThreadServiceEndpoints(svc)
+	endpoints := thread.MakeServiceEndpoints(svc)
 
 	postCommentHandler := httptransport.NewServer(
 		endpoints.PostCommentEndpoint,
-		thread.decodePostCommentRequest,
-		thread.encodeResponse,
+		thread.DecodePostCommentRequest,
+		thread.EncodeResponse,
 	)
 	getCommentHandler := httptransport.NewServer(
 		endpoints.GetCommentEndpoint,
-		thread.decodeGetCommentRequest,
-		thread.encodeResponse,
+		thread.DecodeGetCommentRequest,
+		thread.EncodeResponse,
 	)
 
 	http.Handle("/postComment", postCommentHandler)
