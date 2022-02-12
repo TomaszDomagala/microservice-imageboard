@@ -1,4 +1,4 @@
-package main
+package thread
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func decodeGetCommentRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func DecodeGetCommentRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var request getCommentRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		return nil, err
@@ -14,7 +14,7 @@ func decodeGetCommentRequest(_ context.Context, r *http.Request) (interface{}, e
 	return request, nil
 }
 
-func decodePostCommentRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func DecodePostCommentRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var request postCommentRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		return nil, err
@@ -22,6 +22,6 @@ func decodePostCommentRequest(_ context.Context, r *http.Request) (interface{}, 
 	return request, nil
 }
 
-func encodeResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+func EncodeResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
 	return json.NewEncoder(w).Encode(response)
 }

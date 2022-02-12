@@ -1,4 +1,4 @@
-package main
+package thread
 
 type UserID = string
 type CommentID = int

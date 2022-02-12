@@ -1,19 +1,19 @@
-package main
+package thread
 
 import (
 	"github.com/go-kit/kit/log"
 	"time"
 )
 
-func threadServiceloggingMiddleware(logger log.Logger) ThreadServiceMiddleware {
-	return func(next ThreadService) ThreadService {
+func ServiceLoggingMiddleware(logger log.Logger) ServiceMiddleware {
+	return func(next Service) Service {
 		return &logmw{logger, next}
 	}
 }
 
 type logmw struct {
 	logger log.Logger
-	next   ThreadService
+	next   Service
 }
 
 func (l *logmw) PostComment(body string, author UserID, parentComment CommentID) (newId CommentID, err error) {
@@ -30,3 +30,4 @@ func (l *logmw) GetComment(id CommentID) (comm Comment, err error) {
 	}(time.Now())
 	return l.next.GetComment(id)
 }
+

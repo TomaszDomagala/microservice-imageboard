@@ -1,26 +1,26 @@
-package main
+package thread
 
 import (
-	"app/thread-service/utils"
 	"errors"
+	"github.com/TomaszDomagala/microservice-imageboard/utils"
 	"sync"
 )
 
-// ThreadService serves information about threads.
-type ThreadService interface {
+// Service serves information about threads.
+type Service interface {
 	PostComment(body string, author UserID, parentComment CommentID) (CommentID, error)
 	GetComment(id CommentID) (Comment, error)
 }
 
-type ThreadServiceMiddleware func(ThreadService) ThreadService
+type ServiceMiddleware func(Service) Service
 
-type InMemoryThreadService struct {
+type InMemoryService struct {
 	mtx sync.RWMutex
 	m   map[CommentID]Comment
 }
 
-func NewInMemoryService() ThreadService {
-	return &InMemoryThreadService{
+func NewInMemoryService() Service {
+	return &InMemoryService{
 		m: map[CommentID]Comment{},
 	}
 }
@@ -31,7 +31,7 @@ var (
 
 var commentIDGenerator = utils.NewAutoInc(1)
 
-func (s *InMemoryThreadService) PostComment(body string, author UserID, parentID CommentID) (CommentID, error) {
+func (s *InMemoryService) PostComment(body string, author UserID, parentID CommentID) (CommentID, error) {
 	newID := commentIDGenerator.ID()
 
 	cmt := Comment{Body: body, Author: author, Id: newID, Children: []CommentID{}}
@@ -45,7 +45,7 @@ func (s *InMemoryThreadService) PostComment(body string, author UserID, parentID
 	return newID, nil
 }
 
-func (s *InMemoryThreadService) GetComment(id CommentID) (Comment, error) {
+func (s *InMemoryService) GetComment(id CommentID) (Comment, error) {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 	comment, ok := s.m[id]

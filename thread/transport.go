@@ -1,4 +1,4 @@
-package main
+package thread
 
 import (
 	"context"
@@ -10,14 +10,14 @@ type ThreadServiceEndpoints struct {
 	GetCommentEndpoint  endpoint.Endpoint
 }
 
-func makeThreadServiceEndpoints(s ThreadService) ThreadServiceEndpoints {
+func MakeServiceEndpoints(s Service) ThreadServiceEndpoints {
 	return ThreadServiceEndpoints{
 		PostCommentEndpoint: MakePostCommentEndpoint(s),
 		GetCommentEndpoint:  MakeGetCommentEndpoint(s),
 	}
 }
 
-func MakeGetCommentEndpoint(s ThreadService) endpoint.Endpoint {
+func MakeGetCommentEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(getCommentRequest)
 		comment, err := s.GetComment(req.Id)
@@ -25,7 +25,7 @@ func MakeGetCommentEndpoint(s ThreadService) endpoint.Endpoint {
 	}
 }
 
-func MakePostCommentEndpoint(s ThreadService) endpoint.Endpoint {
+func MakePostCommentEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(postCommentRequest)
 		newId, err := s.PostComment(req.Body, req.Author, req.ParentId)
@@ -52,3 +52,4 @@ type postCommentResponse struct {
 	Id    int   `json:"id"`
 	Error error `json:"error,omitempty"`
 }
+
