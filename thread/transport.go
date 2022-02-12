@@ -1,4 +1,4 @@
-package main
+package thread
 
 import (
 	"context"
@@ -52,3 +52,4 @@ type postCommentResponse struct {
 	Id    int   `json:"id"`
 	Error error `json:"error,omitempty"`
 }
+

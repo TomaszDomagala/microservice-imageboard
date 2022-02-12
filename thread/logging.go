@@ -1,4 +1,4 @@
-package main
+package thread
 
 import (
 	"github.com/go-kit/kit/log"
@@ -30,3 +30,4 @@ func (l *logmw) GetComment(id CommentID) (comm Comment, err error) {
 	}(time.Now())
 	return l.next.GetComment(id)
 }
+

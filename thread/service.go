@@ -1,8 +1,8 @@
-package main
+package thread
 
 import (
-	"app/thread-service/utils"
 	"errors"
+	"github.com/TomaszDomagala/microservice-imageboard/utils"
 	"sync"
 )
 

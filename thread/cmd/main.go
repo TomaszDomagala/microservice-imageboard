@@ -1,7 +1,9 @@
 package main
 
+
 import (
 	"flag"
+	"github.com/TomaszDomagala/microservice-imageboard/thread"
 	"github.com/go-kit/kit/log"
 	httptransport "github.com/go-kit/kit/transport/http"
 	"net/http"
@@ -16,20 +18,20 @@ func main() {
 	logger = log.NewLogfmtLogger(os.Stderr)
 	logger = log.With(logger, "listen", *listen, "caller", log.DefaultCaller)
 
-	svc := NewInMemoryService()
-	svc = threadServiceloggingMiddleware(logger)(svc)
+	svc := thread.NewInMemoryService()
+	svc = thread.threadServiceloggingMiddleware(logger)(svc)
 
-	endpoints := makeThreadServiceEndpoints(svc)
+	endpoints := thread.makeThreadServiceEndpoints(svc)
 
 	postCommentHandler := httptransport.NewServer(
 		endpoints.PostCommentEndpoint,
-		decodePostCommentRequest,
-		encodeResponse,
+		thread.decodePostCommentRequest,
+		thread.encodeResponse,
 	)
 	getCommentHandler := httptransport.NewServer(
 		endpoints.GetCommentEndpoint,
-		decodeGetCommentRequest,
-		encodeResponse,
+		thread.decodeGetCommentRequest,
+		thread.encodeResponse,
 	)
 
 	http.Handle("/postComment", postCommentHandler)
@@ -38,3 +40,4 @@ func main() {
 	logger.Log("msg", "HTTP", "addr", *listen)
 	logger.Log("err", http.ListenAndServe(*listen, nil))
 }
+
