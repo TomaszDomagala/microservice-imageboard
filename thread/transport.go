@@ -5,13 +5,13 @@ import (
 	"github.com/go-kit/kit/endpoint"
 )
 
-type ThreadServiceEndpoints struct {
+type ServiceEndpoints struct {
 	PostCommentEndpoint endpoint.Endpoint
 	GetCommentEndpoint  endpoint.Endpoint
 }
 
-func MakeServiceEndpoints(s Service) ThreadServiceEndpoints {
-	return ThreadServiceEndpoints{
+func MakeServiceEndpoints(s Service) ServiceEndpoints {
+	return ServiceEndpoints{
 		PostCommentEndpoint: MakePostCommentEndpoint(s),
 		GetCommentEndpoint:  MakeGetCommentEndpoint(s),
 	}
@@ -20,7 +20,7 @@ func MakeServiceEndpoints(s Service) ThreadServiceEndpoints {
 func MakeGetCommentEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(getCommentRequest)
-		comment, err := s.GetComment(req.Id)
+		comment, err := s.GetComment(req.ThreadID, req.CommentID)
 		return getCommentResponse{Comment: comment, Error: err}, nil
 	}
 }
@@ -28,13 +28,14 @@ func MakeGetCommentEndpoint(s Service) endpoint.Endpoint {
 func MakePostCommentEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(postCommentRequest)
-		newId, err := s.PostComment(req.Body, req.Author, req.ParentId)
+		newId, err := s.PostComment(req.ThreadID, req.Body, req.Author, req.ParentId)
 		return postCommentResponse{Id: int(newId), Error: err}, nil
 	}
 }
 
 type getCommentRequest struct {
-	Id int `json:"id"`
+	ThreadID  int `json:"threadID"`
+	CommentID int `json:"id"`
 }
 
 type getCommentResponse struct {
@@ -43,6 +44,7 @@ type getCommentResponse struct {
 }
 
 type postCommentRequest struct {
+	ThreadID int    `json:"threadID"`
 	Body     string `json:"body,omitempty"`
 	Author   string `json:"author,omitempty"`
 	ParentId int    `json:"parentId"`
@@ -52,4 +54,3 @@ type postCommentResponse struct {
 	Id    int   `json:"id"`
 	Error error `json:"error,omitempty"`
 }
-
