@@ -25,7 +25,7 @@ type PostgresService struct {
 	db *sql.DB
 }
 
-func (p PostgresService) createThread(threadID ThreadID, body string, author UserID) error {
+func (p *PostgresService) CreateThread(threadID ThreadID, body string, author UserID) error {
 	db := p.db
 	stmtCreateRow := `INSERT INTO threads (threadID, nextID) VALUES $1, $2`
 	_, err := db.Exec(stmtCreateRow, threadID, ROOT_COMMENT_ID+1)
@@ -45,7 +45,7 @@ func (p PostgresService) createThread(threadID ThreadID, body string, author Use
 	return nil
 }
 
-func (p PostgresService) deleteThread(id ThreadID) error {
+func (p *PostgresService) DeleteThread(id ThreadID) error {
 	db := p.db
 	stmtDeleteComments := `DELETE FROM comments WHERE threadID = $1`
 	_, err := db.Exec(stmtDeleteComments, id)
@@ -63,7 +63,7 @@ type DBComment struct {
 	Id     int    `db:"commentID"`
 }
 
-func (p PostgresService) PostComment(threadID ThreadID, body string, author UserID, parentComment CommentID) (CommentID, error) {
+func (p *PostgresService) PostComment(threadID ThreadID, body string, author UserID, parentComment CommentID) (CommentID, error) {
 	db := p.db
 
 	stmtUpdateNextID := `UPDATE threads SET nextID = nextID + 1
@@ -88,7 +88,7 @@ func (p PostgresService) PostComment(threadID ThreadID, body string, author User
 	return newID, nil
 }
 
-func (p PostgresService) GetComment(threadID ThreadID, commentID CommentID) (Comment, error) {
+func (p *PostgresService) GetComment(threadID ThreadID, commentID CommentID) (Comment, error) {
 	db := p.db
 
 	comment := DBComment{}
@@ -119,7 +119,7 @@ func (p PostgresService) GetComment(threadID ThreadID, commentID CommentID) (Com
 	return Comment{comment.Body, comment.Author, comment.Id, ids}, nil
 }
 
-func NewPostgresService(psqlInfo string) *PostgresService {
+func NewPostgresService(psqlInfo string) Service {
 	db, err := ConnectToDB(psqlInfo)
 	if err != nil {
 		panic("Unable to connect to database")
