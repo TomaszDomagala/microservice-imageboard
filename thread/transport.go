@@ -6,14 +6,34 @@ import (
 )
 
 type ServiceEndpoints struct {
-	PostCommentEndpoint endpoint.Endpoint
-	GetCommentEndpoint  endpoint.Endpoint
+	PostCommentEndpoint  endpoint.Endpoint
+	GetCommentEndpoint   endpoint.Endpoint
+	DeleteThreadEndpoint endpoint.Endpoint
+	CreateThreadEndpoint endpoint.Endpoint
 }
 
 func MakeServiceEndpoints(s Service) ServiceEndpoints {
 	return ServiceEndpoints{
-		PostCommentEndpoint: MakePostCommentEndpoint(s),
-		GetCommentEndpoint:  MakeGetCommentEndpoint(s),
+		PostCommentEndpoint:  MakePostCommentEndpoint(s),
+		GetCommentEndpoint:   MakeGetCommentEndpoint(s),
+		DeleteThreadEndpoint: MakeDeleteThreadEndpoint(s),
+		CreateThreadEndpoint: MakeCreateThreadEndpoint(s),
+	}
+}
+
+func MakeDeleteThreadEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(deleteThreadRequest)
+		err := s.DeleteThread(req.id)
+		return basicErrorResponse{Err: err}, nil
+	}
+}
+
+func MakeCreateThreadEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(createThreadRequest)
+		err := s.CreateThread(req.threadID, req.body, req.author)
+		return basicErrorResponse{Err: err}, nil
 	}
 }
 
@@ -33,9 +53,24 @@ func MakePostCommentEndpoint(s Service) endpoint.Endpoint {
 	}
 }
 
+type createThreadRequest struct {
+	threadID ThreadID
+	body     string
+	author   UserID
+}
+type deleteThreadRequest struct {
+	id ThreadID
+}
+
+type basicErrorResponse struct {
+	Err error
+}
+
+func (r basicErrorResponse) error() error { return r.Err }
+
 type getCommentRequest struct {
 	ThreadID  int `json:"threadID"`
-	CommentID int `json:"id"`
+	CommentID int `json:"Id"`
 }
 
 type getCommentResponse struct {
@@ -51,6 +86,6 @@ type postCommentRequest struct {
 }
 
 type postCommentResponse struct {
-	Id    int   `json:"id"`
+	Id    int   `json:"Id"`
 	Error error `json:"error,omitempty"`
 }
