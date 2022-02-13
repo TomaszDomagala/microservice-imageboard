@@ -11,11 +11,11 @@ import (
 )
 
 const (
-	host     = "localhost"
+	host     = "thread_db"
 	port     = 5432
 	user     = "postgres"
-	password = "your-password"
-	dbname   = "calhounio_demo"
+	password = "postgres"
+	dbname   = "thread"
 )
 
 func main() {

@@ -9,83 +9,78 @@ import (
 type Service interface {
 	PostComment(threadID ThreadID, body string, author UserID, parentComment CommentID) (CommentID, error)
 	GetComment(threadID ThreadID, id CommentID) (Comment, error)
+	CreateThread(threadID ThreadID, body string, author UserID) error
+	DeleteThread(id ThreadID) error
 }
 
 type ServiceMiddleware func(Service) Service
 
-//type InMemoryService struct {
-//	mtx sync.RWMutex
-//	m   map[CommentID]Comment
-//}
-//
-//func NewInMemoryService() Service {
-//	return &InMemoryService{
-//		m: map[CommentID]Comment{},
-//	}
-//}
-//
-
-//
-//var commentIDGenerator = utils.NewAutoInc(1)
-//
-//func (s *InMemoryService) PostComment(body string, author UserID, parentID CommentID, id ThreadID) (CommentID, error) {
-//	newID := commentIDGenerator.ID()
-//
-//	cmt := Comment{Body: body, Author: author, CommentID: newID, Children: []CommentID{}}
-//
-//	s.mtx.Lock()
-//	defer s.mtx.Unlock()
-//	s.m[newID] = cmt
-//
-//	s.m[parentID] = s.m[parentID].addChild(newID)
-//
-//	return newID, nil
-//}
-//
-//func (s *InMemoryService) GetComment(id CommentID) (Comment, error) {
-//	s.mtx.RLock()
-//	defer s.mtx.RUnlock()
-//	comment, ok := s.m[id]
-//	if !ok {
-//		return Comment{}, ErrNotFound
-//	}
-//	return comment, nil
-//}
-
 var (
 	ErrNotFound = errors.New("not found")
-	ErrDB       = errors.New("database error")
 )
+
+const ROOT_COMMENT_ID = 0
 
 type PostgresService struct {
 	db *sql.DB
 }
 
+func (p *PostgresService) CreateThread(threadID ThreadID, body string, author UserID) error {
+	db := p.db
+	stmtCreateRow := `INSERT INTO threads (threadID, nextID) VALUES $1, $2`
+	_, err := db.Exec(stmtCreateRow, threadID, ROOT_COMMENT_ID+1)
+	if err != nil {
+		return err
+	}
+
+	stmtInsertComment := `
+		INSERT INTO comments (threadID, commentID, author, body)
+		VALUES ($1, $2, $3, $4)`
+
+	_, err = db.Exec(stmtInsertComment, threadID, ROOT_COMMENT_ID, author, body)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *PostgresService) DeleteThread(id ThreadID) error {
+	db := p.db
+	stmtDeleteComments := `DELETE FROM comments WHERE threadID = $1`
+	_, err := db.Exec(stmtDeleteComments, id)
+	if err != nil {
+		return err
+	}
+	stmtDeleteThreads := `DELETE FROM threads WHERE threadID = $1`
+	_, err = db.Exec(stmtDeleteThreads, id)
+	return err
+}
+
 type DBComment struct {
 	Body   string `db:"body"`
 	Author string `db:"author"`
-	id     int    `db:"CommentID"`
+	Id     int    `db:"commentID"`
 }
 
-func (p PostgresService) PostComment(threadID ThreadID, body string, author UserID, parentComment CommentID) (CommentID, error) {
+func (p *PostgresService) PostComment(threadID ThreadID, body string, author UserID, parentComment CommentID) (CommentID, error) {
 	db := p.db
 
-	updateMaxComment := `UPDATE threads SET nextID = nextID + 1
+	stmtUpdateNextID := `UPDATE threads SET nextID = nextID + 1
 	WHERE threadID = $1 
 	RETURNING nextID`
 
 	newID := 0
-	err := db.QueryRow(updateMaxComment, threadID).Scan(&newID)
+	err := db.QueryRow(stmtUpdateNextID, threadID).Scan(&newID)
 	if err != nil {
 		return 0, err
 	}
 
-	sqlStatement := `
-INSERT INTO comments (threadID, CommentID, author, parentComment, body)
-VALUES ($1, $2, $3, $4, $5)x
-RETURNING id`
+	stmtInsertComment := `
+		INSERT INTO comments (threadID, commentID, author, parentComment, body)
+		VALUES ($1, $2, $3, $4, $5)`
 
-	_, err = db.Exec(sqlStatement, threadID, newID, author, parentComment, body)
+	_, err = db.Exec(stmtInsertComment, threadID, newID, author, parentComment, body)
 	if err != nil {
 		return 0, err
 	}
@@ -93,13 +88,11 @@ RETURNING id`
 	return newID, nil
 }
 
-func (p PostgresService) GetComment(threadID ThreadID, commentID CommentID) (Comment, error) {
+func (p *PostgresService) GetComment(threadID ThreadID, commentID CommentID) (Comment, error) {
 	db := p.db
 
-	var comment DBComment
-	stmtGetCommentData := `SELECT (body, author, CommentID) 
-FROM comments 
-WHERE threadID = $1 AND CommentID = $2`
+	comment := DBComment{}
+	stmtGetCommentData := `SELECT (body, author, CommentID) FROM comments WHERE threadID = $1 AND CommentID = $2`
 	err := db.QueryRow(stmtGetCommentData, threadID, commentID).Scan(&comment)
 	if err != nil {
 		return Comment{}, ErrNotFound
@@ -123,7 +116,7 @@ WHERE threadID = $1 AND CommentID = $2`
 		}
 		ids = append(ids, id)
 	}
-	return Comment{comment.Body, comment.Author, comment.id, ids}, nil
+	return Comment{comment.Body, comment.Author, comment.Id, ids}, nil
 }
 
 func NewPostgresService(psqlInfo string) Service {
