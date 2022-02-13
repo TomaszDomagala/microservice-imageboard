@@ -2,6 +2,7 @@ package thread
 
 type UserID = string
 type CommentID = int
+type ThreadID = int
 
 func (c Comment) addChild(id CommentID) Comment {
 	c.Children = append(c.Children, id)

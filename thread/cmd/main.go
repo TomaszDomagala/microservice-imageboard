@@ -1,13 +1,21 @@
 package main
 
-
 import (
 	"flag"
+	"fmt"
 	"github.com/TomaszDomagala/microservice-imageboard/thread"
 	"github.com/go-kit/kit/log"
 	httptransport "github.com/go-kit/kit/transport/http"
 	"net/http"
 	"os"
+)
+
+const (
+	host     = "localhost"
+	port     = 5432
+	user     = "postgres"
+	password = "your-password"
+	dbname   = "calhounio_demo"
 )
 
 func main() {
@@ -18,7 +26,9 @@ func main() {
 	logger = log.NewLogfmtLogger(os.Stderr)
 	logger = log.With(logger, "listen", *listen, "caller", log.DefaultCaller)
 
-	svc := thread.NewInMemoryService()
+	svc := thread.NewPostgresService(fmt.Sprintf("host=%s port=%d user=%s "+
+		"password=%s dbname=%s sslmode=disable",
+		host, port, user, password, dbname))
 	svc = thread.ServiceLoggingMiddleware(logger)(svc)
 
 	endpoints := thread.MakeServiceEndpoints(svc)
@@ -40,4 +50,3 @@ func main() {
 	logger.Log("msg", "HTTP", "addr", *listen)
 	logger.Log("err", http.ListenAndServe(*listen, nil))
 }
-
