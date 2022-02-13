@@ -1,0 +1,11 @@
+version: "3"
+
+services:
+  thread:
+    image: cosmtrek/air
+    container_name: thread_service
+    working_dir: /app/thread/cmd
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
