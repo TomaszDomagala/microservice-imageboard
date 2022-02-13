@@ -3,9 +3,30 @@ version: "3"
 services:
   thread:
     image: cosmtrek/air
-    container_name: thread_service
     working_dir: /app/thread/cmd
     ports:
       - "8080:8080"
     volumes:
       - .:/app
+  identification:
+    image: cosmtrek/air
+    working_dir: /app/identification/cmd
+    ports:
+      - "8081:8081"
+    volumes:
+      - .:/app
+    depends_on:
+      - identification_db
+  identification_db:
+    image: postgres:latest
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=identification
+    ports:
+      - "5401:5432"
+    volumes:
+      - identification_db:/var/lib/postgresql/data
+volumes:
+  identification_db:
+
