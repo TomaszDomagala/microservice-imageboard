@@ -3,6 +3,8 @@ package board
 import (
 	"database/sql"
 	"errors"
+	"github.com/patrickmn/go-cache"
+	"time"
 )
 
 type ThreadID int
@@ -23,7 +25,8 @@ var (
 )
 
 type PostgresService struct {
-	db *sql.DB
+	db    *sql.DB
+	cache *cache.Cache
 }
 
 func (p *PostgresService) CreateThread(boardID BoardID, owner UserID) (ThreadID, error) {
@@ -56,6 +59,11 @@ type DBComment struct {
 }
 
 func (p *PostgresService) GetThreads(boardID BoardID) ([]ThreadID, error) {
+	cacheKey := string(boardID)
+	if val, found := p.cache.Get(cacheKey); found {
+		return val.([]ThreadID), nil
+	}
+
 	db := p.db
 
 	stmtGetThreads := `SELECT threadID FROM threads WHERE boardID = $1`
@@ -75,6 +83,7 @@ func (p *PostgresService) GetThreads(boardID BoardID) ([]ThreadID, error) {
 		}
 		ids = append(ids, id)
 	}
+	p.cache.Set(cacheKey, ids, cache.DefaultExpiration)
 	return ids, nil
 }
 
@@ -84,6 +93,6 @@ func NewPostgresService(psqlInfo string) Service {
 		panic("Unable to connect to database")
 	}
 	return &PostgresService{
-		db: db,
+		db: db, cache: cache.New(5*time.Minute, 10*time.Minute),
 	}
 }
