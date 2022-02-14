@@ -19,7 +19,7 @@ const (
 )
 
 func main() {
-	listen := flag.String("listen", ":8082", "HTTP listen address")
+	listen := flag.String("listen", ":80", "HTTP listen address")
 	flag.Parse()
 
 	var logger log.Logger

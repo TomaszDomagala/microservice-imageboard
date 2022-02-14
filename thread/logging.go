@@ -16,7 +16,7 @@ type logmw struct {
 	next   Service
 }
 
-func (l *logmw) CreateThread(ip, board, body string) (err error) {
+func (l *logmw) CreateThread(ip, board, body string) (threadID ThreadID,err error) {
 	defer func(begin time.Time) {
 		l.logger.Log(
 			"method", "CreateThread",

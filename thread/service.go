@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -13,7 +14,7 @@ import (
 type Service interface {
 	PostComment(ip string, threadID ThreadID, body string, parentComment CommentID) (CommentID, error)
 	GetComment(threadID ThreadID, id CommentID) (Comment, error)
-	CreateThread(ip, board, body string) error
+	CreateThread(ip, board, body string) (ThreadID, error)
 	DeleteThread(id ThreadID) error
 }
 
@@ -30,7 +31,7 @@ type PostgresService struct {
 }
 
 func identify(ip string) (string, error) {
-	req := fmt.Sprintf("{ip: %s}", ip)
+	req := fmt.Sprintf("{\"ip\": \"%s\"}", ip)
 	resp, err := http.Post("http://identification/identify", "application/json", strings.NewReader(req))
 	if err != nil {
 		return "", err
@@ -51,7 +52,8 @@ func identify(ip string) (string, error) {
 }
 
 func requestNewThread(board, author string) (ThreadID, error) {
-	req := fmt.Sprintf("{boardID: %s, owner: %s}", board, author)
+	req := fmt.Sprintf("{\"boardID\": \"%s\", \"owner\": \"%s\"}", board, author)
+	log.Println(req)
 	resp, err := http.Post("http://board/createThread", "application/json", strings.NewReader(req))
 	if err != nil {
 		return 0, err
@@ -72,20 +74,20 @@ func requestNewThread(board, author string) (ThreadID, error) {
 
 }
 
-func (p *PostgresService) CreateThread(ip, board, body string) error {
+func (p *PostgresService) CreateThread(ip, board, body string) (ThreadID, error) {
 	author, err := identify(ip)
 	if err != nil {
-		return err
+		return 0,fmt.Errorf("failed to identify: %s", err)
 	}
 	threadID, err := requestNewThread(board, author)
 	if err != nil {
-		return err
+		return 0,fmt.Errorf("failed to create board's thread: %s", err)
 	}
 	db := p.db
 	stmtCreateRow := `INSERT INTO threads (threadID, nextID) VALUES ($1, $2)`
 	_, err = db.Exec(stmtCreateRow, threadID, ROOT_COMMENT_ID+1)
 	if err != nil {
-		return err
+		return 0,err
 	}
 
 	stmtInsertComment := `
@@ -94,10 +96,10 @@ func (p *PostgresService) CreateThread(ip, board, body string) error {
 
 	_, err = db.Exec(stmtInsertComment, threadID, ROOT_COMMENT_ID, author, body)
 	if err != nil {
-		return err
+		return 0,err
 	}
 
-	return nil
+	return threadID, nil
 }
 
 func (p *PostgresService) DeleteThread(id ThreadID) error {

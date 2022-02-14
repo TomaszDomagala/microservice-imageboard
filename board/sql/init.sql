@@ -19,7 +19,7 @@ values ('math', 'Math'),
 
 create table if not exists threads
 (
-    boardID    varchar(4)   not null references boards,
+    boardID    varchar(4)   not null references boards(id),
     threadID serial          not null,
     owner    varchar(255) not null
 );

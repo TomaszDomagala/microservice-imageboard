@@ -41,7 +41,7 @@ func (p *PostgresService) CreateThread(boardID BoardID, owner UserID) (ThreadID,
 
 func (p *PostgresService) DeleteThread(boardID BoardID, threadID ThreadID) error {
 	db := p.db
-	stmtDeleteThread := `DELETE FROM threads WHERE boardID = $2 AND threadID = $2`
+	stmtDeleteThread := `DELETE FROM threads WHERE boardID = $1 AND threadID = $2`
 	_, err := db.Exec(stmtDeleteThread, boardID, threadID)
 	if err != nil {
 		return err
