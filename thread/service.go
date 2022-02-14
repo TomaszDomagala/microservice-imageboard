@@ -11,9 +11,9 @@ import (
 
 // Service serves information about threads.
 type Service interface {
-	PostComment(threadID ThreadID, body string, author UserID, parentComment CommentID) (CommentID, error)
+	PostComment(ip string, threadID ThreadID, body string, parentComment CommentID) (CommentID, error)
 	GetComment(threadID ThreadID, id CommentID) (Comment, error)
-	CreateThread(threadID ThreadID, body string, author UserID) error
+	CreateThread(ip, board, body string) error
 	DeleteThread(id ThreadID) error
 }
 
