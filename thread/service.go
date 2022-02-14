@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/patrickmn/go-cache"
 	"log"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // Service serves information about threads.
@@ -27,7 +29,8 @@ var (
 const ROOT_COMMENT_ID = 0
 
 type PostgresService struct {
-	db *sql.DB
+	db    *sql.DB
+	cache *cache.Cache
 }
 
 func identify(ip string) (string, error) {
@@ -77,17 +80,17 @@ func requestNewThread(board, author string) (ThreadID, error) {
 func (p *PostgresService) CreateThread(ip, board, body string) (ThreadID, error) {
 	author, err := identify(ip)
 	if err != nil {
-		return 0,fmt.Errorf("failed to identify: %s", err)
+		return 0, fmt.Errorf("failed to identify: %s", err)
 	}
 	threadID, err := requestNewThread(board, author)
 	if err != nil {
-		return 0,fmt.Errorf("failed to create board's thread: %s", err)
+		return 0, fmt.Errorf("failed to create board's thread: %s", err)
 	}
 	db := p.db
 	stmtCreateRow := `INSERT INTO threads (threadID, nextID) VALUES ($1, $2)`
 	_, err = db.Exec(stmtCreateRow, threadID, ROOT_COMMENT_ID+1)
 	if err != nil {
-		return 0,err
+		return 0, err
 	}
 
 	stmtInsertComment := `
@@ -96,7 +99,7 @@ func (p *PostgresService) CreateThread(ip, board, body string) (ThreadID, error)
 
 	_, err = db.Exec(stmtInsertComment, threadID, ROOT_COMMENT_ID, author, body)
 	if err != nil {
-		return 0,err
+		return 0, err
 	}
 
 	return threadID, nil
@@ -150,6 +153,10 @@ func (p *PostgresService) PostComment(ip string, threadID ThreadID, body string,
 }
 
 func (p *PostgresService) GetComment(threadID ThreadID, commentID CommentID) (Comment, error) {
+	cacheKey := fmt.Sprintf("%d:%d", threadID, commentID)
+	if val, found := p.cache.Get(cacheKey); found {
+		return val.(Comment), nil
+	}
 	db := p.db
 
 	comment := DBComment{}
@@ -177,7 +184,9 @@ func (p *PostgresService) GetComment(threadID ThreadID, commentID CommentID) (Co
 		}
 		ids = append(ids, id)
 	}
-	return Comment{comment.Body, comment.Author, comment.Id, ids}, nil
+	comme := Comment{comment.Body, comment.Author, comment.Id, ids}
+	p.cache.Set(cacheKey, comme, cache.DefaultExpiration)
+	return comme, nil
 }
 
 func NewPostgresService(psqlInfo string) Service {
@@ -186,6 +195,6 @@ func NewPostgresService(psqlInfo string) Service {
 		panic("Unable to connect to database")
 	}
 	return &PostgresService{
-		db: db,
+		db: db, cache: cache.New(5*time.Minute, 10*time.Minute),
 	}
 }
