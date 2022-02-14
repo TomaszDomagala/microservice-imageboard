@@ -46,7 +46,34 @@ services:
       - "5401:5432"
     volumes:
       - identification_db:/var/lib/postgresql/data
+  board:
+    image: cosmtrek/air
+    working_dir: /app/board/cmd
+    depends_on:
+      - board_db
+    ports:
+      - "8082:8082"
+    volumes:
+      - .:/app
+  board_db:
+    container_name: board_db
+    image: postgres:latest
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=board
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+    ports:
+      - '5434:5432'
+    volumes:
+      - ./board/sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - board_db:/var/lib/postgresql/data
 volumes:
   identification_db:
   thread_db:
+  board_db:
 
