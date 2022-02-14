@@ -22,6 +22,22 @@ func DecodePostCommentRequest(_ context.Context, r *http.Request) (interface{}, 
 	return request, nil
 }
 
+func DecodeDeleteThreadRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var request deleteThreadRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		return nil, err
+	}
+	return request, nil
+}
+
+func DecodeCreateThreadRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var request createThreadRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		return nil, err
+	}
+	return request, nil
+}
+
 func codeFrom(err error) int {
 	switch err {
 	case ErrNotFound:
