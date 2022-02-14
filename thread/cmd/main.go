@@ -44,6 +44,12 @@ func main() {
 		thread.EncodeResponse,
 	)
 
+	getChildrenHandler := httptransport.NewServer(
+		endpoints.GetChildrenEndpoint,
+		thread.DecodeGetChildrenRequest,
+		thread.EncodeResponse,
+	)
+
 	deleteThreadHandler := httptransport.NewServer(
 		endpoints.DeleteThreadEndpoint,
 		thread.DecodeDeleteThreadRequest,
@@ -58,6 +64,7 @@ func main() {
 
 	http.Handle("/postComment", postCommentHandler)
 	http.Handle("/getComment", getCommentHandler)
+	http.Handle("/getChildren", getChildrenHandler)
 	http.Handle("/deleteThread", deleteThreadHandler)
 	http.Handle("/createThread", createThreadHandler)
 
