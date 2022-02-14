@@ -44,8 +44,22 @@ func main() {
 		thread.EncodeResponse,
 	)
 
+	deleteThreadHandler := httptransport.NewServer(
+		endpoints.DeleteThreadEndpoint,
+		thread.DecodeDeleteThreadRequest,
+		thread.EncodeResponse,
+	)
+
+	createThreadHandler := httptransport.NewServer(
+		endpoints.CreateThreadEndpoint,
+		thread.DecodeCreateThreadRequest,
+		thread.EncodeResponse,
+	)
+
 	http.Handle("/postComment", postCommentHandler)
 	http.Handle("/getComment", getCommentHandler)
+	http.Handle("/deleteThread", deleteThreadHandler)
+	http.Handle("/createThread", createThreadHandler)
 
 	logger.Log("msg", "HTTP", "addr", *listen)
 	logger.Log("err", http.ListenAndServe(*listen, nil))

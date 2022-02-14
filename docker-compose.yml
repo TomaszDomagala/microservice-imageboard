@@ -73,6 +73,13 @@ services:
     volumes:
       - ./board/sql/init.sql:/docker-entrypoint-initdb.d/init.sql
       - board_db:/var/lib/postgresql/data
+  media:
+    image: cosmtrek/air
+    working_dir: /app/media/cmd
+    ports:
+      - "8083:8083"
+    volumes:
+      - .:/app
 volumes:
   identification_db:
   thread_db:

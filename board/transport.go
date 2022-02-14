@@ -28,6 +28,10 @@ type getThreadResponse struct {
 	Err error      `json:"err,omitempty"`
 }
 
+func (r getThreadResponse) error() error {
+	return r.Err
+}
+
 func MakeGetThreadsEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(getThreadsRequest)
@@ -63,6 +67,10 @@ type createThreadRequest struct {
 type createThreadResponse struct {
 	threadID ThreadID `json:"id"`
 	Err      error    `json:"err,omitempty"`
+}
+
+func (r createThreadResponse) error() error {
+	return r.Err
 }
 
 func MakeCreateThreadEndpoint(s Service) endpoint.Endpoint {
