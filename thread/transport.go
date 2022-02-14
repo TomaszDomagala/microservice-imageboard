@@ -32,7 +32,7 @@ func MakeDeleteThreadEndpoint(s Service) endpoint.Endpoint {
 func MakeCreateThreadEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(createThreadRequest)
-		err := s.CreateThread(req.threadID, req.body, req.author)
+		err := s.CreateThread(req.Ip, req.Board, req.Body)
 		return basicErrorResponse{Err: err}, nil
 	}
 }
@@ -48,15 +48,15 @@ func MakeGetCommentEndpoint(s Service) endpoint.Endpoint {
 func MakePostCommentEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(postCommentRequest)
-		newId, err := s.PostComment(req.ThreadID, req.Body, req.Author, req.ParentId)
+		newId, err := s.PostComment(req.Ip,req.ThreadID, req.Body, req.ParentId)
 		return postCommentResponse{Id: int(newId), Error: err}, nil
 	}
 }
 
 type createThreadRequest struct {
-	threadID ThreadID
-	body     string
-	author   UserID
+	Ip    string `json:"ip"`
+	Board string `json:"board"`
+	Body  string `json:"body"`
 }
 type deleteThreadRequest struct {
 	id ThreadID
@@ -79,9 +79,9 @@ type getCommentResponse struct {
 }
 
 type postCommentRequest struct {
+	Ip       string `json:"ip"`
 	ThreadID int    `json:"threadID"`
 	Body     string `json:"body,omitempty"`
-	Author   string `json:"author,omitempty"`
 	ParentId int    `json:"parentId"`
 }
 

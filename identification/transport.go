@@ -10,7 +10,7 @@ type identifyRequest struct {
 }
 
 type identifyResponse struct {
-	Id uint `json:"id"`
+	Id string `json:"id"`
 }
 
 func makeIdentifyEndpoint(srv Service) endpoint.Endpoint {

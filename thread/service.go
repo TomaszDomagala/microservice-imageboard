@@ -2,14 +2,18 @@ package thread
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
+	"strings"
 )
 
 // Service serves information about threads.
 type Service interface {
-	PostComment(threadID ThreadID, body string, author UserID, parentComment CommentID) (CommentID, error)
+	PostComment(ip string, threadID ThreadID, body string, parentComment CommentID) (CommentID, error)
 	GetComment(threadID ThreadID, id CommentID) (Comment, error)
-	CreateThread(threadID ThreadID, body string, author UserID) error
+	CreateThread(ip, board, body string) error
 	DeleteThread(id ThreadID) error
 }
 
@@ -25,10 +29,61 @@ type PostgresService struct {
 	db *sql.DB
 }
 
-func (p *PostgresService) CreateThread(threadID ThreadID, body string, author UserID) error {
+func identify(ip string) (string, error) {
+	req := fmt.Sprintf("{ip: %s}", ip)
+	resp, err := http.Post("http://identification/identify", "application/json", strings.NewReader(req))
+	if err != nil {
+		return "", err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("identification failed: %s", resp.Status)
+	}
+	defer resp.Body.Close()
+	var idResp struct {
+		ID string `json:"id"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&idResp)
+	if err != nil {
+		return "", err
+	}
+
+	return idResp.ID, nil
+}
+
+func requestNewThread(board, author string) (ThreadID, error) {
+	req := fmt.Sprintf("{boardID: %s, owner: %s}", board, author)
+	resp, err := http.Post("http://board/createThread", "application/json", strings.NewReader(req))
+	if err != nil {
+		return 0, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return 0, fmt.Errorf("failed to create thread: %s", resp.Status)
+	}
+	defer resp.Body.Close()
+	var idResp struct {
+		ID ThreadID `json:"id"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&idResp)
+	if err != nil {
+		return 0, err
+	}
+
+	return idResp.ID, nil
+
+}
+
+func (p *PostgresService) CreateThread(ip, board, body string) error {
+	author, err := identify(ip)
+	if err != nil {
+		return err
+	}
+	threadID, err := requestNewThread(board, author)
+	if err != nil {
+		return err
+	}
 	db := p.db
 	stmtCreateRow := `INSERT INTO threads (threadID, nextID) VALUES $1, $2`
-	_, err := db.Exec(stmtCreateRow, threadID, ROOT_COMMENT_ID+1)
+	_, err = db.Exec(stmtCreateRow, threadID, ROOT_COMMENT_ID+1)
 	if err != nil {
 		return err
 	}
@@ -63,15 +118,19 @@ type DBComment struct {
 	Id     int    `db:"commentID"`
 }
 
-func (p *PostgresService) PostComment(threadID ThreadID, body string, author UserID, parentComment CommentID) (CommentID, error) {
+func (p *PostgresService) PostComment(ip string, threadID ThreadID, body string, parentComment CommentID) (CommentID, error) {
 	db := p.db
+	author, err := identify(ip)
+	if err != nil {
+		return 0, err
+	}
 
 	stmtUpdateNextID := `UPDATE threads SET nextID = nextID + 1
 	WHERE threadID = $1 
 	RETURNING nextID`
 
 	newID := 0
-	err := db.QueryRow(stmtUpdateNextID, threadID).Scan(&newID)
+	err = db.QueryRow(stmtUpdateNextID, threadID).Scan(&newID)
 	if err != nil {
 		return 0, err
 	}

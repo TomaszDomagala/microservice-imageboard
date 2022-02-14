@@ -3,11 +3,12 @@ package identification
 import (
 	"errors"
 	"gorm.io/gorm"
+	"strconv"
 	"time"
 )
 
 type Service interface {
-	Identify(ip string) (uint, error)
+	Identify(ip string) (string, error)
 }
 
 type service struct {
@@ -16,13 +17,13 @@ type service struct {
 
 const idLifeTime = time.Minute
 
-func (s *service) Identify(ip string) (uint, error) {
+func (s *service) Identify(ip string) (string, error) {
 	t := time.Now().Add(-idLifeTime)
 	var identification Identification
 
 	res := s.db.Where("ip = ? AND updated_at > ?", ip, t).Take(&identification)
 	if res.Error != nil && !errors.Is(res.Error, gorm.ErrRecordNotFound) {
-		return 0, res.Error
+		return "", res.Error
 	}
 
 	if errors.Is(res.Error, gorm.ErrRecordNotFound) {
@@ -31,11 +32,11 @@ func (s *service) Identify(ip string) (uint, error) {
 		}
 		res = s.db.Create(&identification)
 		if res.Error != nil {
-			return 0, res.Error
+			return "", res.Error
 		}
 	}
 
-	return identification.ID, nil
+	return strconv.Itoa(int(identification.ID)), nil
 }
 
 func NewService(db *gorm.DB) Service {

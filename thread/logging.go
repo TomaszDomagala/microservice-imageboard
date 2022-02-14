@@ -16,12 +16,18 @@ type logmw struct {
 	next   Service
 }
 
-func (l *logmw) CreateThread(threadID ThreadID, body string, author UserID) (err error) {
+func (l *logmw) CreateThread(ip, board, body string) (err error) {
 	defer func(begin time.Time) {
-		l.logger.Log("method", "CreateThread", "threadID", threadID, "body", body, "author",
-			author, "took", time.Since(begin), "err", err)
+		l.logger.Log(
+			"method", "CreateThread",
+			"ip", ip,
+			"board", board,
+			"body", body,
+			"took", time.Since(begin),
+			"err", err,
+		)
 	}(time.Now())
-	return l.next.CreateThread(threadID, body, author)
+	return l.next.CreateThread(ip, board,body)
 }
 
 func (l *logmw) DeleteThread(threadID ThreadID) (err error) {
@@ -31,12 +37,20 @@ func (l *logmw) DeleteThread(threadID ThreadID) (err error) {
 	return l.next.DeleteThread(threadID)
 }
 
-func (l *logmw) PostComment(threadID ThreadID, body string, author UserID, parentComment CommentID) (newId CommentID, err error) {
+func (l *logmw) PostComment(ip string, threadID ThreadID, body string, parentComment CommentID) (newId CommentID, err error) {
 	defer func(begin time.Time) {
-		l.logger.Log("method", "PostComment", "threadID", threadID, "body", body, "author",
-			author, "parentComment", parentComment, "generated", newId, "took", time.Since(begin), "err", err)
+		l.logger.Log(
+			"method", "PostComment",
+			"ip", ip,
+			"threadID", threadID,
+			"body", body,
+			"parentComment", parentComment,
+			"newId", newId,
+			"took", time.Since(begin),
+			"err", err,
+		)
 	}(time.Now())
-	return l.next.PostComment(threadID, body, author, parentComment)
+	return l.next.PostComment(ip,threadID, body, parentComment)
 }
 
 func (l *logmw) GetComment(threadID ThreadID, id CommentID) (comm Comment, err error) {
