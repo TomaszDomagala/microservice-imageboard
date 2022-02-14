@@ -130,15 +130,21 @@ func (p *PostgresService) PostComment(ip string, threadID ThreadID, body string,
 		return 0, err
 	}
 
+	fmt.Println(author, threadID, body, parentComment)
+
 	stmtUpdateNextID := `UPDATE threads SET nextID = nextID + 1
 	WHERE threadID = $1 
 	RETURNING nextID`
 
 	newID := 0
 	err = db.QueryRow(stmtUpdateNextID, threadID).Scan(&newID)
+	newID = newID - 1
+
 	if err != nil {
 		return 0, err
 	}
+
+	fmt.Print(newID)
 
 	stmtInsertComment := `
 		INSERT INTO comments (threadID, commentID, author, parentComment, body)
@@ -158,17 +164,18 @@ func (p *PostgresService) GetComment(threadID ThreadID, commentID CommentID) (Co
 		return val.(Comment), nil
 	}
 	db := p.db
-
 	comment := DBComment{}
-	stmtGetCommentData := `SELECT (body, author, commentID) FROM comments WHERE threadID = $1 AND commentID = $2`
-	err := db.QueryRow(stmtGetCommentData, threadID, commentID).Scan(&comment)
+
+	stmtGetCommentData := `SELECT body, author, commentID FROM comments WHERE threadID = $1 AND commentID = $2;`
+	err := db.QueryRow(stmtGetCommentData, threadID, commentID).Scan(&comment.Body, &comment.Author, &comment.Id)
 	if err != nil {
+		fmt.Println(err)
 		return Comment{}, ErrNotFound
 	}
 
 	// It's also possible to store list of children in comment row.
 	// For now I use the easier version.
-	stmtGetChildren := `SELECT commentID FROM comments WHERE threadID = $1 AND parentComment = $2`
+	stmtGetChildren := `SELECT commentID FROM comments WHERE threadID = $1 AND parentComment = $2;`
 	var ids []int
 	rows, err := db.Query(stmtGetChildren, threadID, commentID)
 	if err != nil {

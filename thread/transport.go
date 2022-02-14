@@ -24,7 +24,7 @@ func MakeServiceEndpoints(s Service) ServiceEndpoints {
 func MakeDeleteThreadEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(deleteThreadRequest)
-		err := s.DeleteThread(req.id)
+		err := s.DeleteThread(req.Id)
 		return basicErrorResponse{Err: err}, nil
 	}
 }
@@ -62,7 +62,7 @@ type createThreadRequest struct {
 	Body  string `json:"body"`
 }
 type deleteThreadRequest struct {
-	id ThreadID
+	Id ThreadID `json:"id"`
 }
 
 type createThreadResponse struct {
