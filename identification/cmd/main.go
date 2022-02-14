@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	listen := flag.String("listen", ":8081", "HTTP listen address")
+	listen := flag.String("listen", ":80", "HTTP listen address")
 	flag.Parse()
 
 	db, err := identification.NewDB()
