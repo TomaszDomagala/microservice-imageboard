@@ -77,17 +77,17 @@ func requestNewThread(board, author string) (ThreadID, error) {
 func (p *PostgresService) CreateThread(ip, board, body string) (ThreadID, error) {
 	author, err := identify(ip)
 	if err != nil {
-		return 0,fmt.Errorf("failed to identify: %s", err)
+		return 0, fmt.Errorf("failed to identify: %s", err)
 	}
 	threadID, err := requestNewThread(board, author)
 	if err != nil {
-		return 0,fmt.Errorf("failed to create board's thread: %s", err)
+		return 0, fmt.Errorf("failed to create board's thread: %s", err)
 	}
 	db := p.db
 	stmtCreateRow := `INSERT INTO threads (threadID, nextID) VALUES ($1, $2)`
 	_, err = db.Exec(stmtCreateRow, threadID, ROOT_COMMENT_ID+1)
 	if err != nil {
-		return 0,err
+		return 0, err
 	}
 
 	stmtInsertComment := `
@@ -96,7 +96,7 @@ func (p *PostgresService) CreateThread(ip, board, body string) (ThreadID, error)
 
 	_, err = db.Exec(stmtInsertComment, threadID, ROOT_COMMENT_ID, author, body)
 	if err != nil {
-		return 0,err
+		return 0, err
 	}
 
 	return threadID, nil
@@ -127,15 +127,21 @@ func (p *PostgresService) PostComment(ip string, threadID ThreadID, body string,
 		return 0, err
 	}
 
+	fmt.Println(author, threadID, body, parentComment)
+
 	stmtUpdateNextID := `UPDATE threads SET nextID = nextID + 1
 	WHERE threadID = $1 
 	RETURNING nextID`
 
 	newID := 0
 	err = db.QueryRow(stmtUpdateNextID, threadID).Scan(&newID)
+	newID = newID - 1
+
 	if err != nil {
 		return 0, err
 	}
+
+	fmt.Print(newID)
 
 	stmtInsertComment := `
 		INSERT INTO comments (threadID, commentID, author, parentComment, body)
@@ -151,17 +157,18 @@ func (p *PostgresService) PostComment(ip string, threadID ThreadID, body string,
 
 func (p *PostgresService) GetComment(threadID ThreadID, commentID CommentID) (Comment, error) {
 	db := p.db
-
 	comment := DBComment{}
-	stmtGetCommentData := `SELECT (body, author, commentID) FROM comments WHERE threadID = $1 AND commentID = $2`
-	err := db.QueryRow(stmtGetCommentData, threadID, commentID).Scan(&comment)
+
+	stmtGetCommentData := `SELECT body, author, commentID FROM comments WHERE threadID = $1 AND commentID = $2;`
+	err := db.QueryRow(stmtGetCommentData, threadID, commentID).Scan(&comment.Body, &comment.Author, &comment.Id)
 	if err != nil {
+		fmt.Println(err)
 		return Comment{}, ErrNotFound
 	}
 
 	// It's also possible to store list of children in comment row.
 	// For now I use the easier version.
-	stmtGetChildren := `SELECT commentID FROM comments WHERE threadID = $1 AND parentComment = $2`
+	stmtGetChildren := `SELECT commentID FROM comments WHERE threadID = $1 AND parentComment = $2;`
 	var ids []int
 	rows, err := db.Query(stmtGetChildren, threadID, commentID)
 	if err != nil {
