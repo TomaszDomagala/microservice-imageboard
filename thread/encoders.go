@@ -14,6 +14,14 @@ func DecodeGetCommentRequest(_ context.Context, r *http.Request) (interface{}, e
 	return request, nil
 }
 
+func DecodeGetChildrenRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var request getCommentChildrenRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		return nil, err
+	}
+	return request, nil
+}
+
 func DecodePostCommentRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var request postCommentRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {

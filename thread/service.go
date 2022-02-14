@@ -18,6 +18,7 @@ type Service interface {
 	GetComment(threadID ThreadID, id CommentID) (Comment, error)
 	CreateThread(ip, board, body string) (ThreadID, error)
 	DeleteThread(id ThreadID) error
+	GetChildren(threadID ThreadID, commentID CommentID) ([]Comment, error)
 }
 
 type ServiceMiddleware func(Service) Service
@@ -159,7 +160,7 @@ func (p *PostgresService) PostComment(ip string, threadID ThreadID, body string,
 }
 
 func (p *PostgresService) GetComment(threadID ThreadID, commentID CommentID) (Comment, error) {
-	cacheKey := fmt.Sprintf("%d:%d", threadID, commentID)
+	cacheKey := fmt.Sprintf("S:%d:%d", threadID, commentID)
 	if val, found := p.cache.Get(cacheKey); found {
 		return val.(Comment), nil
 	}
@@ -194,6 +195,36 @@ func (p *PostgresService) GetComment(threadID ThreadID, commentID CommentID) (Co
 	comme := Comment{comment.Body, comment.Author, comment.Id, ids}
 	p.cache.Set(cacheKey, comme, cache.DefaultExpiration)
 	return comme, nil
+}
+
+func (p *PostgresService) GetChildren(threadID ThreadID, commentID CommentID) ([]Comment, error) {
+	cacheKey := fmt.Sprintf("C:%d:%d", threadID, commentID)
+	if val, found := p.cache.Get(cacheKey); found {
+		fmt.Println("GetChildren: Cache hit!")
+		return val.([]Comment), nil
+	}
+
+	db := p.db
+
+	stmtGetCommentData := `SELECT body, author, commentID FROM comments WHERE threadID = $1 AND parentComment = $2;`
+	rows, err := db.Query(stmtGetCommentData, threadID, commentID)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var comments []Comment
+	for rows.Next() {
+		var comment Comment
+		if err := rows.Scan(&comment.Body, &comment.Author, &comment.Id); err != nil {
+			return comments, err
+		}
+		comments = append(comments, comment)
+	}
+	p.cache.Set(cacheKey, comments, cache.DefaultExpiration)
+
+	return comments, nil
 }
 
 func NewPostgresService(psqlInfo string) Service {

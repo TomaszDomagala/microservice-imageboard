@@ -10,12 +10,14 @@ type ServiceEndpoints struct {
 	GetCommentEndpoint   endpoint.Endpoint
 	DeleteThreadEndpoint endpoint.Endpoint
 	CreateThreadEndpoint endpoint.Endpoint
+	GetChildrenEndpoint  endpoint.Endpoint
 }
 
 func MakeServiceEndpoints(s Service) ServiceEndpoints {
 	return ServiceEndpoints{
 		PostCommentEndpoint:  MakePostCommentEndpoint(s),
 		GetCommentEndpoint:   MakeGetCommentEndpoint(s),
+		GetChildrenEndpoint:  MakeGetChildrenEndpoint(s),
 		DeleteThreadEndpoint: MakeDeleteThreadEndpoint(s),
 		CreateThreadEndpoint: MakeCreateThreadEndpoint(s),
 	}
@@ -45,6 +47,14 @@ func MakeGetCommentEndpoint(s Service) endpoint.Endpoint {
 		req := request.(getCommentRequest)
 		comment, err := s.GetComment(req.ThreadID, req.CommentID)
 		return getCommentResponse{Comment: comment, Error: err}, nil
+	}
+}
+
+func MakeGetChildrenEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(getCommentChildrenRequest)
+		comments, err := s.GetChildren(req.ThreadID, req.CommentID)
+		return getChildrenResponse{comments, err}, nil
 	}
 }
 
@@ -84,6 +94,18 @@ type getCommentResponse struct {
 	Comment Comment `json:"comment"`
 	Error   error   `json:"error,omitempty"`
 }
+
+type getCommentChildrenRequest struct {
+	ThreadID  int `json:"threadID"`
+	CommentID int `json:"Id"`
+}
+
+type getChildrenResponse struct {
+	Children []Comment `json:"children"`
+	Error    error     `json:"error,omitempty"`
+}
+
+func (r getChildrenResponse) error() error { return r.Error }
 
 type postCommentRequest struct {
 	Ip       string `json:"ip"`
