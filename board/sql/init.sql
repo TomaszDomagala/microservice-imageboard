@@ -12,7 +12,7 @@ values ('math', 'Math'),
        ('s', 'Sports'),
        ('alc', 'Alcohol (Piwo)'),
        ('bg', 'Board games'),
-       ('anime', 'hinskie bajki'),
+       ('anim', 'hinskie bajki'),
        ('sci', 'Science'),
        ('gm', 'Gaming'),
        ('pol', 'Politics');

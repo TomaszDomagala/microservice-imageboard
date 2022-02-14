@@ -27,7 +27,7 @@ type PostgresService struct {
 
 func (p *PostgresService) CreateThread(threadID ThreadID, body string, author UserID) error {
 	db := p.db
-	stmtCreateRow := `INSERT INTO threads (threadID, nextID) VALUES $1, $2`
+	stmtCreateRow := `INSERT INTO threads (threadID, nextID) VALUES ($1, $2)`
 	_, err := db.Exec(stmtCreateRow, threadID, ROOT_COMMENT_ID+1)
 	if err != nil {
 		return err
@@ -92,7 +92,7 @@ func (p *PostgresService) GetComment(threadID ThreadID, commentID CommentID) (Co
 	db := p.db
 
 	comment := DBComment{}
-	stmtGetCommentData := `SELECT (body, author, CommentID) FROM comments WHERE threadID = $1 AND CommentID = $2`
+	stmtGetCommentData := `SELECT (body, author, commentID) FROM comments WHERE threadID = $1 AND commentID = $2`
 	err := db.QueryRow(stmtGetCommentData, threadID, commentID).Scan(&comment)
 	if err != nil {
 		return Comment{}, ErrNotFound
@@ -100,7 +100,7 @@ func (p *PostgresService) GetComment(threadID ThreadID, commentID CommentID) (Co
 
 	// It's also possible to store list of children in comment row.
 	// For now I use the easier version.
-	stmtGetChildren := `SELECT CommentID FROM comments WHERE threadID = $1 AND parentComment = $2`
+	stmtGetChildren := `SELECT commentID FROM comments WHERE threadID = $1 AND parentComment = $2`
 	var ids []int
 	rows, err := db.Query(stmtGetChildren, threadID, commentID)
 	if err != nil {
