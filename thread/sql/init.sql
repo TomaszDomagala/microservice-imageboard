@@ -10,6 +10,7 @@ create table if not exists comments (
     author varchar(20),
     parentComment int,
     body varchar(400),
+    hasMedia boolean default false,
     primary key (threadID, commentID)
 );
 

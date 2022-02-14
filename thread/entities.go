@@ -15,4 +15,5 @@ type Comment struct {
 	Author   UserID      `json:"author,omitempty"`
 	Id       CommentID   `json:"Id,omitempty"`
 	Children []CommentID `json:"children,omitempty"`
+	HasMedia bool        `json:"hasMedia,omitempty"`
 }

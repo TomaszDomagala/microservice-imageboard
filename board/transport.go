@@ -46,7 +46,7 @@ type deleteThreadRequest struct {
 }
 
 type basicErrorResponse struct {
-	Err error
+	Err error `json:"err,omitempty"`
 }
 
 func (r basicErrorResponse) error() error { return r.Err }
