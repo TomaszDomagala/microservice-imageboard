@@ -14,9 +14,9 @@ import (
 
 // Service serves information about threads.
 type Service interface {
-	PostComment(ip string, threadID ThreadID, body string, parentComment CommentID) (CommentID, error)
+	PostComment(ip string, threadID ThreadID, body string, parentComment CommentID, hasMedia bool) (CommentID, error)
 	GetComment(threadID ThreadID, id CommentID) (Comment, error)
-	CreateThread(ip, board, body string) (ThreadID, error)
+	CreateThread(ip, board, body string, hasMedia bool) (ThreadID, error)
 	DeleteThread(id ThreadID) error
 	GetChildren(threadID ThreadID, commentID CommentID) ([]Comment, error)
 }
@@ -78,7 +78,7 @@ func requestNewThread(board, author string) (ThreadID, error) {
 
 }
 
-func (p *PostgresService) CreateThread(ip, board, body string) (ThreadID, error) {
+func (p *PostgresService) CreateThread(ip, board, body string, hasMedia bool) (ThreadID, error) {
 	author, err := identify(ip)
 	if err != nil {
 		return 0, fmt.Errorf("failed to identify: %s", err)
@@ -95,10 +95,10 @@ func (p *PostgresService) CreateThread(ip, board, body string) (ThreadID, error)
 	}
 
 	stmtInsertComment := `
-		INSERT INTO comments (threadID, commentID, author, body)
-		VALUES ($1, $2, $3, $4)`
+		INSERT INTO comments (threadID, commentID, author, body, hasMedia)
+		VALUES ($1, $2, $3, $4, $5)`
 
-	_, err = db.Exec(stmtInsertComment, threadID, ROOT_COMMENT_ID, author, body)
+	_, err = db.Exec(stmtInsertComment, threadID, ROOT_COMMENT_ID, author, body, hasMedia)
 	if err != nil {
 		return 0, err
 	}
@@ -119,12 +119,13 @@ func (p *PostgresService) DeleteThread(id ThreadID) error {
 }
 
 type DBComment struct {
-	Body   string `db:"body"`
-	Author string `db:"author"`
-	Id     int    `db:"commentID"`
+	Body     string `db:"body"`
+	Author   string `db:"author"`
+	Id       int    `db:"commentID"`
+	HasMedia bool   `db:"hasMedia"`
 }
 
-func (p *PostgresService) PostComment(ip string, threadID ThreadID, body string, parentComment CommentID) (CommentID, error) {
+func (p *PostgresService) PostComment(ip string, threadID ThreadID, body string, parentComment CommentID, hasMedia bool) (CommentID, error) {
 	db := p.db
 	author, err := identify(ip)
 	if err != nil {
@@ -148,10 +149,10 @@ func (p *PostgresService) PostComment(ip string, threadID ThreadID, body string,
 	fmt.Print(newID)
 
 	stmtInsertComment := `
-		INSERT INTO comments (threadID, commentID, author, parentComment, body)
-		VALUES ($1, $2, $3, $4, $5)`
+		INSERT INTO comments (threadID, commentID, author, parentComment, body, hasMedia)
+		VALUES ($1, $2, $3, $4, $5, $6)`
 
-	_, err = db.Exec(stmtInsertComment, threadID, newID, author, parentComment, body)
+	_, err = db.Exec(stmtInsertComment, threadID, newID, author, parentComment, body, hasMedia)
 	if err != nil {
 		return 0, err
 	}
@@ -167,8 +168,8 @@ func (p *PostgresService) GetComment(threadID ThreadID, commentID CommentID) (Co
 	db := p.db
 	comment := DBComment{}
 
-	stmtGetCommentData := `SELECT body, author, commentID FROM comments WHERE threadID = $1 AND commentID = $2;`
-	err := db.QueryRow(stmtGetCommentData, threadID, commentID).Scan(&comment.Body, &comment.Author, &comment.Id)
+	stmtGetCommentData := `SELECT body, author, commentID, hasMedia FROM comments WHERE threadID = $1 AND commentID = $2;`
+	err := db.QueryRow(stmtGetCommentData, threadID, commentID).Scan(&comment.Body, &comment.Author, &comment.Id, &comment.HasMedia)
 	if err != nil {
 		fmt.Println(err)
 		return Comment{}, ErrNotFound
@@ -192,7 +193,7 @@ func (p *PostgresService) GetComment(threadID ThreadID, commentID CommentID) (Co
 		}
 		ids = append(ids, id)
 	}
-	comme := Comment{comment.Body, comment.Author, comment.Id, ids}
+	comme := Comment{comment.Body, comment.Author, comment.Id, ids, comment.HasMedia}
 	p.cache.Set(cacheKey, comme, cache.DefaultExpiration)
 	return comme, nil
 }
@@ -206,7 +207,7 @@ func (p *PostgresService) GetChildren(threadID ThreadID, commentID CommentID) ([
 
 	db := p.db
 
-	stmtGetCommentData := `SELECT body, author, commentID FROM comments WHERE threadID = $1 AND parentComment = $2;`
+	stmtGetCommentData := `SELECT body, author, commentID, hasMedia FROM comments WHERE threadID = $1 AND parentComment = $2;`
 	rows, err := db.Query(stmtGetCommentData, threadID, commentID)
 	if err != nil {
 		return nil, err
@@ -217,7 +218,7 @@ func (p *PostgresService) GetChildren(threadID ThreadID, commentID CommentID) ([
 	var comments []Comment
 	for rows.Next() {
 		var comment Comment
-		if err := rows.Scan(&comment.Body, &comment.Author, &comment.Id); err != nil {
+		if err := rows.Scan(&comment.Body, &comment.Author, &comment.Id, &comment.HasMedia); err != nil {
 			return comments, err
 		}
 		comments = append(comments, comment)

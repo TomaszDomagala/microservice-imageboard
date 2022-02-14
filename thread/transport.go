@@ -34,7 +34,7 @@ func MakeDeleteThreadEndpoint(s Service) endpoint.Endpoint {
 func MakeCreateThreadEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(createThreadRequest)
-		id, err := s.CreateThread(req.Ip, req.Board, req.Body)
+		id, err := s.CreateThread(req.Ip, req.Board, req.Body, req.HasMedia)
 		if err != nil {
 			return basicErrorResponse{Err: err}, nil
 		}
@@ -61,16 +61,18 @@ func MakeGetChildrenEndpoint(s Service) endpoint.Endpoint {
 func MakePostCommentEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(postCommentRequest)
-		newId, err := s.PostComment(req.Ip, req.ThreadID, req.Body, req.ParentId)
-		return postCommentResponse{Id: int(newId), Error: err}, nil
+		newId, err := s.PostComment(req.Ip, req.ThreadID, req.Body, req.ParentId, req.HasMedia)
+		return postCommentResponse{Id: newId, Error: err}, nil
 	}
 }
 
 type createThreadRequest struct {
-	Ip    string `json:"ip"`
-	Board string `json:"board"`
-	Body  string `json:"body"`
+	Ip       string `json:"ip"`
+	Board    string `json:"board"`
+	Body     string `json:"body"`
+	HasMedia bool   `json:"hasMedia"`
 }
+
 type deleteThreadRequest struct {
 	Id ThreadID `json:"id"`
 }
@@ -80,7 +82,7 @@ type createThreadResponse struct {
 }
 
 type basicErrorResponse struct {
-	Err error
+	Err error `json:"err,omitempty"`
 }
 
 func (r basicErrorResponse) error() error { return r.Err }
@@ -112,6 +114,7 @@ type postCommentRequest struct {
 	ThreadID int    `json:"threadID"`
 	Body     string `json:"body,omitempty"`
 	ParentId int    `json:"parentId"`
+	HasMedia bool   `json:"hasMedia,omitempty"`
 }
 
 type postCommentResponse struct {
